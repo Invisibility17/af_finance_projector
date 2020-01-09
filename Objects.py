@@ -4,7 +4,7 @@ class Member():
     def __init__(self, personal, tax_sheet):
         self.rank           = personal.loc["Rank", "Value"]
         self.EAD            = personal.loc["EAD", "Value"]
-        self.compute_TIS(datetime.datetime.now())
+        self.update_senority(datetime.datetime.now())
 
         self.zip_code       = personal.loc["BAH location", "Value"]
 
@@ -15,9 +15,7 @@ class Member():
         self.cost_of_living = personal.loc["Cost of Living", "Value"]
         self.state_tax      = personal.loc["State Tax", "Value"]
         self.BRS            = personal.loc["BRS", "Value"].lower() == "yes"
-        self.total_income = 1
-        self.fed_tax =1
-        self.saved = 1
+        
         self.tax_sheet = tax_sheet
 
     def compute_taxes(self):
@@ -48,79 +46,95 @@ class Member():
         self.fed_tax = total_tax
         return total_tax
 
+    def update_senority(self, when):
+        self.time_in_service = when-self.EAD
+        self.senority = self.compute_TIS(when)
+        
     def compute_TIS(self, when):
         # probably bounds the leap day error
-        self.time_in_service = when-self.EAD
-        if self.time_in_service < datetime.timedelta(days=2*365.2425):
-            self.senority = 1
-        elif self.time_in_service < datetime.timedelta(days=3*365.2425):
-            self.senority = 2
-        elif self.time_in_service < datetime.timedelta(days=4*365.2425):
-            self.senority = 3
-        elif self.time_in_service < datetime.timedelta(days=6*365.2425):
-            self.senority = 4
-        elif self.time_in_service < datetime.timedelta(days=8*365.2425):
-            self.senority = 5
-        elif self.time_in_service < datetime.timedelta(days=10*365.2425):
-            self.senority = 6
-        elif self.time_in_service < datetime.timedelta(days=12*365.2425):
-            self.senority = 7
-        elif self.time_in_service < datetime.timedelta(days=14*365.2425):
-            self.senority = 8
-        elif self.time_in_service < datetime.timedelta(days=16*365.2425):
-            self.senority = 9
-        elif self.time_in_service < datetime.timedelta(days=18*365.2425):
-            self.senority = 10
-        elif self.time_in_service < datetime.timedelta(days=20*365.2425):
-            self.senority = 11
-        elif self.time_in_service < datetime.timedelta(days=22*365.2425):
-            self.senority = 12
-        elif self.time_in_service < datetime.timedelta(days=24*365.2425):
-            self.senority = 13
-        elif self.time_in_service < datetime.timedelta(days=26*365.2425):
-            self.senority = 14
-        elif self.time_in_service < datetime.timedelta(days=28*365.2425):
-            self.senority = 15
-        elif self.time_in_service < datetime.timedelta(days=30*365.2425):
-            self.senority = 16
-        elif self.time_in_service < datetime.timedelta(days=32*365.2425):
-            self.senority = 17
-        elif self.time_in_service < datetime.timedelta(days=34*365.2425):
-            self.senority = 18
-        elif self.time_in_service < datetime.timedelta(days=36*365.2425):
-            self.senority = 19
-        elif self.time_in_service < datetime.timedelta(days=38*365.2425):
-            self.senority = 20
-        elif self.time_in_service < datetime.timedelta(days=40*365.2425):
-            self.senority = 21
+        time_in_service = when-self.EAD
+        if time_in_service < datetime.timedelta(days=2*365.2425):
+            senority = 1
+        elif time_in_service < datetime.timedelta(days=3*365.2425):
+            senority = 2
+        elif time_in_service < datetime.timedelta(days=4*365.2425):
+            senority = 3
+        elif time_in_service < datetime.timedelta(days=6*365.2425):
+            senority = 4
+        elif time_in_service < datetime.timedelta(days=8*365.2425):
+            senority = 5
+        elif time_in_service < datetime.timedelta(days=10*365.2425):
+            senority = 6
+        elif time_in_service < datetime.timedelta(days=12*365.2425):
+            senority = 7
+        elif time_in_service < datetime.timedelta(days=14*365.2425):
+            senority = 8
+        elif time_in_service < datetime.timedelta(days=16*365.2425):
+            senority = 9
+        elif time_in_service < datetime.timedelta(days=18*365.2425):
+            senority = 10
+        elif time_in_service < datetime.timedelta(days=20*365.2425):
+            senority = 11
+        elif time_in_service < datetime.timedelta(days=22*365.2425):
+            senority = 12
+        elif time_in_service < datetime.timedelta(days=24*365.2425):
+            senority = 13
+        elif time_in_service < datetime.timedelta(days=26*365.2425):
+            senority = 14
+        elif time_in_service < datetime.timedelta(days=28*365.2425):
+            senority = 15
+        elif time_in_service < datetime.timedelta(days=30*365.2425):
+            senority = 16
+        elif time_in_service < datetime.timedelta(days=32*365.2425):
+            senority = 17
+        elif time_in_service < datetime.timedelta(days=34*365.2425):
+            senority = 18
+        elif time_in_service < datetime.timedelta(days=36*365.2425):
+            senority = 19
+        elif time_in_service < datetime.timedelta(days=38*365.2425):
+            senority = 20
+        elif time_in_service < datetime.timedelta(days=40*365.2425):
+            senority = 21
         else:
-            self.senority = 22
-        return self.senority
+            senority = 22
+        return senority
 
     def life_change(self, change_matrix): #promotion_info=None, move_info=None, family_info=None):
-        change_matrix = change_matrix.sort_values(by=["Time"])
-        print(change_matrix)
         # Data Frame:
-        #           Time Base BAH BAS Married Dependents
-        # Promote
-        # Move
-        # Marry
-        # Kid
-        
-        # promotion: affects base, bah, bas (+taxes, saved)
-        time = promotion_info.loc["Promote", "Time"]
-        if not np.isnan(time):
-            time = time.month
+        #   Time Rank ZIP Base BAH BAS Married Dependents CoL State_Tax Other_Income
+        # 1.
+        # 2.
+        # 3.
+        # 4.
+        # reset incomes
+        self.total_income = 0
+        self.taxable_income = 0
+        month_index = 0
+        this_year = 0
+        for change in change_matrix.iterrows():
+            this_year = change[1]["Time"].year
+            months = change[1]["Time"].month - month_index # start AFTER the month of the change
+            self.total_income += (self.base + self.bah + self.bas)*months
+            self.taxable_income += self.base*months
+            month_index = change[1]["Time"].month
+            self.rank = change[1]["Rank"]
+            self.zip_code = change[1]["ZIP"]
+            self.base = change[1]["Base"]
+            self.bah = change[1]["BAH"]
+            self.bas = change[1]["BAS"]
+            self.married = change[1]["Married"]
+            self.dependents = change[1]["Dependents"]
+            self.cost_of_living = change[1]["Cost of Living"]
+            self.state_tax = change[1]["State Tax"]
+            self.other_income = change[1]["Other Income"]
+        self.total_income += (self.base + self.bah + self.bas)*(12 - month_index)
+        self.taxable_income += (self.base)*(12 - month_index)
+        self.total_income += self.other_income
+        self.taxable_income += self.other_income
+        self.compute_taxes()
 
-        # move: affects bah (+saved)
-
-        # marriage: affects bah (+taxes, saved)
-
-    #def promote(self, rank=self.rank, time, new_base=self.base, new_bah=self.bah, new_bas=self.bas):
-    #   pass
-        # compute total income
-        # compute taxable income
-        #self.total_income = (self.base + self.new_bah )* time.month +  
+        self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
+        return self.saved
     
     def update_income(self, new_extra_income):
         self.other_income = new_extra_income
@@ -145,10 +159,10 @@ class Member():
             
         
     
-    def new_year(self, year):
+    """def new_year(self, year):
         self.compute_TIS(year)
         self.total_income = (self.base + self.bas + self.bah)*12 + self.other_income
-        self.taxable_income = self.base * 12 + self.other_income
+        self.taxable_income = self.base * 12 + self.other_income"""
         
     def set_pay_allowances(self, base, bas, bah):
         self.base = base 
@@ -160,10 +174,22 @@ class Member():
         self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
 
     def __str__(self):
-        return """You make a total of ${0:.2f} a year.
-You pay ${1:.2f} in federal and ${2:.2f} in state taxes.
-Your cost of living is ${3:.2f} so you save ${4:.2f} annually ({5:.2f}%)""".format(
-    self.total_income, self.fed_tax, self.state_tax, self.cost_of_living, self.saved, self.saved*100/self.total_income)
+        return """{} at zip {}
+base:\t${:.2f} bah:\t${:.2f} bas:\t${:.2f}
+other income:\t${:.2f}
+total income:\t${:.2f}
+taxable income:\t${:.2f}
+fed tax:\t${:.2f}
+state tax:\t${:.2f}
+cost of living:\t${:.2f}
+saved:\t{}""".format(self.rank, self.zip_code, self.base, self.bah, self.bas, self.other_income,
+                     self.total_income,self.taxable_income, self.fed_tax, self.state_tax,
+                     self.cost_of_living,self.saved)
+
+        #return """You make a total of ${0:.2f} a year.
+#You pay ${1:.2f} in federal and ${2:.2f} in state taxes.
+#Your cost of living is ${3:.2f} so you save ${4:.2f} annually ({5:.2f}%)""".format(
+#    self.total_income, self.fed_tax, self.state_tax, self.cost_of_living, self.saved, self.saved*100/self.total_income)
 
 
 class Account():

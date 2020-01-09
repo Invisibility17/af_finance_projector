@@ -4,7 +4,7 @@ import tabula
 import pandas
 from os.path import exists
 import datetime
-import numpy
+import numpy as np
 from Objects import Member, Account, Retirement
             
 def main():
@@ -23,65 +23,24 @@ def main():
     bas = calculate_bas(bas_sheet, me.rank)
     
     bah = pull_bah("BAH", me.zip_code, me.rank, me.dependents)
-    print(me)
+    #print(me)
     #fed_tax = pull_taxes("Air_Force_money.xlsx", base_pay*12+me.other_income, me.married)
-    #me.set_secondary(base_pay, bas, bah, fed_tax)
+    me.set_pay_allowances(base, bas, bah)
     
     # Stage 2: initialize assets for current year
     assets = pull_assets(me_xls, misc_xls)
 
     # Stage 3: see if projections exist for years ahead.
     raw_projections = read_sheet(me_xls, "Career Projection")
-    projections = pull_projection(raw_projections, bas_sheet, base_sheet)
+    projections = pull_projection(raw_projections, me, base_sheet, bas_sheet)
 
     # Stage 4: create and output projections
-    """this_year = datetime.datetime.now().year
-    index_year = this_year
-    for row in range(projection.shape[0]):
-        this_proj = projection.iloc[row,:]
-        for year in range(index_year, this_proj["Year"], 1):
-            # projection for gap rows / initial projection prior to further updates
-            if year == this_year: # initial projection; do after current month only
-                print("Calculating for remainder of current year: {}".format(year))
-                increment_accounts_partial_year(me, assets, datetime.datetime.now().month+1)
-            else: # gap rows; do entire year
-                print("Calculating for future year: {}".format(year))
-                increment_accounts_whole_year(me, assets)
-            for a in assets:
-                print(a)
-        index_year = this_proj["Year"]+1
-        
-        # projection for current row
-        # update all the January changes
-        if not numpy.isnan(this_proj["Additional Income"]): 
-            me.additional_income = this_proj["Additional Income"]
-        if not numpy.isnan(this_proj["Zip Code"]): # all moves happen in January. Slightly inaccurate; account with CoL if necessary.
-            me.zip_code = this_proj["Zip Code"]
-        if not numpy.isnan(this_proj["Cost of Living"]):
-            me.cost_of_living = this_proj["Cost of Living"]
-        if not numpy.isnan(this_proj["State Taxes"]):
-            me.state_tax = this_proj["State Taxes"]
-        if not numpy.isnan(this_proj["Dependents"]):
-            me.dependents = this_proj["Dependents"].lower() == "yes"
-        if not numpy.isnan(this_proj["Married"]):
-            me.dependents = this_proj["Married"].lower() == "yes"
-
-        # Promote and calculate new seniority
-        #if (not numpy.isnan(this_proj["Rank"])) and (this_proj["Rank"] != me.rank):
-        #    pass
-            
-        if this_proj["Year"] == this_year:
-            if datetime.datetime.now().month > me.EAD.month:
-                pass
-            # in early months, wait for promotion
-
-            # update rank
-
-            # proceed accordingly
-
-        else:
-            pass
-       """
+    this_year = datetime.datetime.now().year
+    print(me)
+    for proj in projections: # starts with this year
+        saved = me.life_change(proj) # update member. Returns saved.
+        print(proj.iloc[0,0].year)
+        print(me)
         
 
 def increment_accounts_partial_year(me, assets, start_month):
@@ -139,33 +98,129 @@ def calculate_govt_match(me, monthly_amount):
     else:
         return 0
     
-def pull_projection(raw, bas_chart, pay_chart):
+def pull_projection(raw, me, pay_chart, bas_chart):
     # get all the events
 
-    promotions = raw.loc[:,["Promote Date", "Promote"]]
-    moves = raw.loc[:,["Move Date", "Move"]]
-    marry = raw.loc[:,"Anniversary"]
-    kids = raw.loc[:,"Kid Birth Date"]
+    promotions = raw.loc[:,["Promote Date", "New Rank"]]
+    moves = raw.loc[:,["Move Date", "New Zip"]]
+    marry = raw.loc[:,["Anniversary"]]
+    kids = raw.loc[:,["Kid Birth Date"]]
     misc = raw.loc[:,["Other Date", "Cost of Living", "State Taxes", "Additional Income"]]
-    print(promotions)
-    print(moves)
-    print(marry)
-    print(kids)
-    print(misc)
     events = []
     # put them in order -- time, type, data
+    max_year = 0
     for row in promotions.iterrows():
-        print(row)
-    """for row in range(promotions.shape[0]):
-        events.append([promotions.loc[row, "Promote Date"], "Promote", promotions.low[row, "Promote"]])
-    pprint(events)"""
-    # combine any in the same year
-
-    # put all in data frames
-
-    # calculate / fill data frames for BAS, BAH, Base
+        if not pandas.isnull(row[1]["Promote Date"]):
+            if row[1]["Promote Date"].year > max_year:
+                max_year = row[1]["Promote Date"].year
+            events.append([row[1]["Promote Date"], "Promote", row[1]["New Rank"]])
+    for row in moves.iterrows():
+        if not pandas.isnull(row[1]["Move Date"]):
+            if row[1]["Move Date"].year > max_year:
+                max_year = row[1]["Move Date"].year
+            events.append([row[1]["Move Date"], "Move", row[1]["New Zip"]])
+    for row in marry.iterrows():
+        if not pandas.isnull(row[1]["Anniversary"]):
+            if row[1]["Anniversary"].year > max_year:
+                max_year = row[1]["Anniversary"].year
+            events.append([row[1]["Anniversary"], "Marry", ""])
+    for row in kids.iterrows():
+        if not pandas.isnull(row[1]["Kid Birth Date"]):
+            if row[1]["Kid Birth Date"].year > max_year:
+                max_year = row[1]["Kid Birth Date"].year
+            events.append([row[1]["Kid Birth Date"], "Kid", ""])
+    for row in misc.iterrows():
+        if not pandas.isnull(row[1]["Other Date"]):
+            if row[1]["Other Date"].year > max_year:
+                max_year = row[1]["Other Date"].year
+            if not pandas.isnull(row[1]["Cost of Living"]):
+                events.append([row[1]["Other Date"], "Cost of Living", row[1]["Cost of Living"]])
+            if not pandas.isnull(row[1]["State Taxes"]):
+                events.append([row[1]["Other Date"], "State Taxes", row[1]["State Taxes"]])
+            if not pandas.isnull(row[1]["Additional Income"]):
+                events.append([row[1]["Other Date"], "Other Income", row[1]["Additional Income"]])
+    if len(events) == 0:
+        return pandas.DataFrame(events, columns=["Time", "Type", "Data"])
+    for all_year in range(datetime.datetime.now().year, max_year+1, 1):
+        events.append([me.EAD.replace(year=all_year, day=me.EAD.day+1), "Senority", ""])
+    events = pandas.DataFrame(events, columns=["Time", "Type", "Data"])
+    events.sort_values(by="Time", inplace=True)
+    events.reset_index(inplace=True, drop=True)
     
-    return promotions
+    
+    # Create update frames
+    year = events.loc[0, "Time"].year
+    start_row = 0
+    last_row = 0
+
+    events = create_update_frame(events, me, pay_chart, bas_chart)
+    #print(all_events)
+
+    batched_events = []
+    
+    for row in events.iterrows():
+        if not row[1].loc["Time"].year == year:
+            batched_events.append( events.iloc[start_row:last_row+1,:])
+            start_row = row[0]
+            last_row = row[0]
+            year = row[1].loc["Time"].year
+        else:
+            last_row = row[0]
+    batched_events.append(events.iloc[start_row:last_row+1, :])
+        
+    return batched_events
+
+def create_update_frame(rows, me, pay_chart, bas_chart):
+    #  Month Rank Base BAH BAS Married Dependents
+    easy_rows = []
+    rank = me.rank
+    zip_code = me.zip_code
+    base = me.base
+    bah = me.bah
+    bas = me.bas
+    married = me.married
+    dependents = me.dependents
+    other_income = me.other_income
+    cost_of_living = me.cost_of_living
+    state_tax = me.state_tax
+    senority = me.senority
+    
+    for row in rows.iterrows():
+        time = row[1]["Time"]
+        senority = me.compute_TIS(time)
+        if row[1]["Type"] == "Promote":
+            rank = row[1]["Data"]
+            base = calculate_base(pay_chart, senority, rank)
+            bah = pull_bah("BAH", zip_code, rank, dependents)
+            bas = calculate_bas(bas_chart, rank)
+        if row[1]["Type"] == "Move":
+            zip_code = int(row[1]["Data"])
+            bah = pull_bah("BAH", zip_code, rank, dependents)
+        if row[1]["Type"] == "Marry":
+            married = True
+            dependents = True
+            bah = pull_bah("BAH", zip_code, rank, married)
+        if row[1]["Type"] == "Kid":
+            dependents = True
+            bah = pull_bah("BAH", zip_code, rank, dependents)
+        if row[1]["Type"] == "Cost of Living":
+            cost_of_living = row[1]["Data"]
+        if row[1]["Type"] == "State Taxes":
+            state_tax = row[1]["Data"]
+        if row[1]["Type"] == "Other Income":
+            other_income = row[1]["Data"]
+        if row[1]["Type"] == "Senority":
+            base = calculate_base(pay_chart, senority, rank)
+
+        easy_rows.append([time, rank, zip_code, base, bah, bas,
+                          married, dependents, cost_of_living,
+                          state_tax, other_income])
+            
+    easy_frame = pandas.DataFrame(easy_rows, columns = ["Time", "Rank", "ZIP", "Base",
+                                                        "BAH", "BAS", "Married",
+                                                        "Dependents","Cost of Living",
+                                                        "State Tax", "Other Income"])
+    return easy_frame
     
 def pull_assets(member_sheet, limit_sheet):
     limits = read_sheet(limit_sheet, "Contribution Limits")
@@ -178,8 +233,7 @@ def pull_assets(member_sheet, limit_sheet):
             accounts.append(Retirement(assets.iloc[r,:], limits.loc[:,"IRA"]))
         else:
             accounts.append(Account(assets.iloc[r,:]))
-    for a in accounts:
-        print(a)
+
     return accounts
     
 def pull_member(member_sheet, taxes):
@@ -239,7 +293,7 @@ def calculate_base(base_sheet, my_senority, my_rank):
     for i,rank in enumerate(ranks_col):
         if my_rank in str(rank):
             base_pay = base_sheet.iloc[i,my_senority]
-            if numpy.isnan(base_pay):
+            if np.isnan(base_pay):
                 base_pay = base_sheet.iloc[i+1, my_senority]
             break
     return base_pay
