@@ -8,22 +8,34 @@ import numpy
 from Objects import Member, Account, Retirement
             
 def main():
+    misc_xls = "Air_Force_money.xlsx"
+    me_xls = "Rachel_money.xlsx"
+    pay_csv = "pay_chart.csv"
+    
     # Stage 1: initialize member for current / past year
-    me = pull_member("Rachel_money.xlsx")
-    base_pay = pull_base_pay("2020 Military Pay_Basic_DP.pdf", "pay_chart.csv", me.senority, me.rank)
-    bas = pull_bas("Air_Force_money.xlsx", me.rank)
+    taxes = read_sheet(misc_xls, "Tax Brackets")
+    me = pull_member(me_xls, taxes)
+    
+    base_sheet = pull_base("2020 Military Pay_Basic_DP.pdf", pay_csv)
+    base = calculate_base(base_sheet, me.senority, me.rank)
+    
+    bas_sheet = read_sheet(misc_xls, "BAS")
+    bas = calculate_bas(bas_sheet, me.rank)
+    
     bah = pull_bah("BAH", me.zip_code, me.rank, me.dependents)
-    fed_tax = pull_taxes("Air_Force_money.xlsx", base_pay*12+me.other_income, me.married)
-    me.set_secondary(base_pay, bas, bah, fed_tax)
-
+    print(me)
+    #fed_tax = pull_taxes("Air_Force_money.xlsx", base_pay*12+me.other_income, me.married)
+    #me.set_secondary(base_pay, bas, bah, fed_tax)
+    
     # Stage 2: initialize assets for current year
-    assets = pull_assets("Rachel_money.xlsx", "Air_Force_money.xlsx")
+    assets = pull_assets(me_xls, misc_xls)
 
     # Stage 3: see if projections exist for years ahead.
-    projection = pull_projection("Rachel_money.xlsx")
+    raw_projections = read_sheet(me_xls, "Career Projection")
+    projections = pull_projection(raw_projections, bas_sheet, base_sheet)
 
     # Stage 4: create and output projections
-    this_year = datetime.datetime.now().year
+    """this_year = datetime.datetime.now().year
     index_year = this_year
     for row in range(projection.shape[0]):
         this_proj = projection.iloc[row,:]
@@ -69,7 +81,7 @@ def main():
 
         else:
             pass
-            
+       """
         
 
 def increment_accounts_partial_year(me, assets, start_month):
@@ -127,9 +139,33 @@ def calculate_govt_match(me, monthly_amount):
     else:
         return 0
     
-def pull_projection(member_sheet):
-    proj_sheet = read_sheet(member_sheet, "Career Projection")
-    return proj_sheet
+def pull_projection(raw, bas_chart, pay_chart):
+    # get all the events
+
+    promotions = raw.loc[:,["Promote Date", "Promote"]]
+    moves = raw.loc[:,["Move Date", "Move"]]
+    marry = raw.loc[:,"Anniversary"]
+    kids = raw.loc[:,"Kid Birth Date"]
+    misc = raw.loc[:,["Other Date", "Cost of Living", "State Taxes", "Additional Income"]]
+    print(promotions)
+    print(moves)
+    print(marry)
+    print(kids)
+    print(misc)
+    events = []
+    # put them in order -- time, type, data
+    for row in promotions.iterrows():
+        print(row)
+    """for row in range(promotions.shape[0]):
+        events.append([promotions.loc[row, "Promote Date"], "Promote", promotions.low[row, "Promote"]])
+    pprint(events)"""
+    # combine any in the same year
+
+    # put all in data frames
+
+    # calculate / fill data frames for BAS, BAH, Base
+    
+    return promotions
     
 def pull_assets(member_sheet, limit_sheet):
     limits = read_sheet(limit_sheet, "Contribution Limits")
@@ -146,15 +182,17 @@ def pull_assets(member_sheet, limit_sheet):
         print(a)
     return accounts
     
-def pull_member(member_sheet):
+def pull_member(member_sheet, taxes):
     career_stats = read_sheet(member_sheet, "Career Stats")
     career_stats = career_stats.set_index("Info")
-    me = Member(career_stats)
+    me = Member(career_stats, taxes)
     return me
 
-def pull_taxes(money_sheet, annual_base_pay, married):
+def pull_taxes(money_sheet): #, annual_base_pay, married):
     # Pull in rates, brackets, etc.
     tax_sheet = read_sheet(money_sheet, "Tax Brackets")
+    return tax_sheet
+"""
     rates = tax_sheet.loc[:,"Tax Rate"]
     if married:
         brackets = tax_sheet.loc[:,"Married"]
@@ -180,20 +218,22 @@ def pull_taxes(money_sheet, annual_base_pay, married):
         else:
             break
     
-    return total_tax
+    return total_tax"""
 
     
-def pull_bas(BAS_sheet, rank):
-    BAS_sheet = read_sheet(BAS_sheet, "BAS")
+def calculate_bas(BAS_sheet, rank):
     if "O" in rank:
         return BAS_sheet.iloc[0, 1]
     else:
         return BAS_sheet.iloc[1,1]
 
-def pull_base_pay(base_pdf, base_csv, my_senority, my_rank):
+def pull_base(base_pdf, base_csv):
     if not exists(base_csv):
         tabula.convert_into(base_pdf, base_csv)
     base_sheet = read_sheet(base_csv, base_csv.split(".")[0])
+    return base_sheet
+
+def calculate_base(base_sheet, my_senority, my_rank):
     senority_col = base_sheet.iloc[:,my_senority]
     ranks_col = base_sheet.iloc[:,0]
     for i,rank in enumerate(ranks_col):
