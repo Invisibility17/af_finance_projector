@@ -1,15 +1,15 @@
 import datetime
 class Member():
     def __init__(self, vals):
-        self.rank = vals[0]
-        self.EAD = vals[1]
-        self.zip_code = vals[2]
-        self.married = vals[3].lower() == "yes"
-        self.dependents = vals[4].lower() == "yes"
-        self.other_income = vals[5]
-        self.cost_of_living = vals[6]
-        self.state_tax = vals[7]
-        self.BRS = vals[8].lower() == "yes"
+        self.rank           = vals.loc["Rank", "Value"]
+        self.EAD            = vals.loc["EAD", "Value"]
+        self.zip_code       = vals.loc["BAH location", "Value"]
+        self.married        = vals.loc["Married?", "Value"].lower() == "yes"
+        self.dependents     = vals.loc["Dependents?", "Value"].lower() == "yes"
+        self.other_income   = vals.loc["Other income", "Value"]
+        self.cost_of_living = vals.loc["Cost of Living", "Value"]
+        self.state_tax      = vals.loc["State Tax", "Value"]
+        self.BRS            = vals.loc["BRS", "Value"].lower() == "yes"
         self.compute_TIS()
 
     def compute_TIS(self):
@@ -65,7 +65,7 @@ class Member():
         self.bas = bas
         self.bah = bah
         self.fed_tax = fed
-        self.total_income = self.base + self.bas + self.bah + self.other_income
+        self.total_income = (self.base + self.bas + self.bah)*12 + self.other_income
         self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
 
     def __str__(self):

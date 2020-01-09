@@ -9,20 +9,34 @@ from Objects import Member
 
 class Account():
     def __init__(self, vals):
-        self.name = vals[0]
-        self.balance = vals[1]
-        self.proj_growth = vals[2]
+        self.name = vals["Type"]
+        self.balance = vals["Balance"]
+        self.proj_growth = vals["Growth Percent"]
+        self.hasLimit = False
+
+    def contribute(self, amount):
+        self.balance += amount
+
+    def monthly_grow(self):
+        self.balance *= (1 + (self.proj_growth/120))
+
+    def gets_match(self):
+        return self.name == "TSP"
 
     def __str__(self):
-        return """{} account has a balance of ${:.2f} and a projected growth rate of {}%""".format(
+        return """{} account has a balance of ${:.2f} and a projected growth rate of {}%.""".format(
             self.name, self.balance, self.proj_growth)
 
-class TSP(Account):
-    pass
+class Retirement(Account):
+    def __init__(self, vals, limit):
+        super().__init__(vals)
+        self.hasLimit = True
+        self.limit = limit.iloc[0]
 
-class IRA(Account):
-    def contribute(self, amount):
-        pass
+    def __str__(self):
+        return super().__str__() + " Member's annual contribution limit is ${:.2f}.".format(self.limit)
+
+
             
 def main():
     # Stage 1: initialize member for current / past year
@@ -31,43 +45,91 @@ def main():
     bas = pull_bas("Air_Force_money.xlsx", me.rank)
     bah = pull_bah("BAH", me.zip_code, me.rank, me.dependents)
     fed_tax = pull_taxes("Air_Force_money.xlsx", base_pay*12+me.other_income, me.married)
-    me.set_secondary(base_pay*12, bas*12, bah*12, fed_tax)
-    #print(me)
+    me.set_secondary(base_pay, bas, bah, fed_tax)
 
     # Stage 2: initialize assets for current year
-    assets = pull_assets("Rachel_money.xlsx")
+    assets = pull_assets("Rachel_money.xlsx", "Air_Force_money.xlsx")
 
     # Stage 3: see if projections exist for years ahead.
     projection = pull_projection("Rachel_money.xlsx")
 
     # Stage 4: create and output projections
-    now_year = datetime.datetime.now().year
+    index_year = datetime.datetime.now().year
     for row in range(projection.shape[0]):
         this_proj = projection.iloc[row,:]
-        for year in range(now_year, this_proj["Year"], 1):
-            print(year)
+        for year in range(index_year, this_proj["Year"], 1):
+            print(index_year)
+            # projection for gap rows / initial projection prior to further updates
+            if year == datetime.datetime.now().year: # initial projection; do after current month only
+                pass #update_assets(me, assets)
+            else: # gap rows; do entire year
+                increment_accounts_whole_year(me, assets)
+                    
+                
 
-        now_year = this_proj["Year"]+1
+        index_year = this_proj["Year"]+1
+        # projection for current row
 
+def increment_accounts_whole_year(me, assets):
+    # In order of priority, max out accounts (accounting for government match), add to accounts, and account for growth
+    remain_to_save = me.saved
+    monthly_saves = [0]*len(assets)
+    for i, account in enumerate(assets):
+        if account.hasLimit and remain_to_save > account.limit:
+            monthly_saves[i] = account.limit / 12
+            remain_to_save -= account.limit
+        else:
+            monthly_saves[i] = remain_to_save/12
+            remain_to_save = 0
+            break
+
+    for month in range(12):
+        for i in range(len(monthly_saves)):
+            #account.contribute(monthly_saves)
+            if assets[i].gets_match():
+                govt_match = calculate_govt_match(me, monthly_saves[i])
+            assets[i].contribute(monthly_saves[i] + govt_match)
+            assets[i].monthly_grow()
+
+    for account in assets:
+        print(account)
+    
+
+def calculate_govt_match(me, monthly_amount):
+    percent = monthly_amount / me.base
+    if me.BRS:
+        if percent >= 0.05:
+            return me.base * .05
+        elif percent >= 0.03:
+            return me.base * .03 + ((percent - .03 ) * .5 * me.base_pay)
+        else:
+            return max(me.base * percent, me.base * .01)
+    else:
+        return 0
+    
 def pull_projection(member_sheet):
     proj_sheet = read_sheet(member_sheet, "Career Projection")
     return proj_sheet
     
-def pull_assets(member_sheet):
-    asset_sheet = read_sheet(member_sheet, "Assets")
+def pull_assets(member_sheet, limit_sheet):
+    limits = read_sheet(limit_sheet, "Contribution Limits")
+    assets = read_sheet(member_sheet, "Assets")
     accounts = []
-    for r in range(asset_sheet.shape[0]):
-        if "TSP" in asset_sheet.iloc[r,0]:
-            accounts.append(TSP(asset_sheet.iloc[r,:]))
-        elif "IRA" in asset_sheet.iloc[r,0]:
-            accounts.append(IRA(asset_sheet.iloc[r,:]))
+    for r in range(assets.shape[0]):
+        if "TSP" in assets.loc[assets.index[r], "Type"]:
+            accounts.append(Retirement(assets.iloc[r,:], limits.loc[:,"TSP"]))
+        elif "IRA" in assets.loc[assets.index[r], "Type"]:
+            accounts.append(Retirement(assets.iloc[r,:], limits.loc[:,"IRA"]))
         else:
-            accounts.append(Account(asset_sheet.iloc[r,:]))
+            accounts.append(Account(assets.iloc[r,:]))
+    for a in accounts:
+        print(a)
     return accounts
     
 def pull_member(member_sheet):
     career_stats = read_sheet(member_sheet, "Career Stats")
-    me = Member(career_stats.iloc[:,1])
+    career_stats = career_stats.set_index("Info")
+    me = Member(career_stats)
     return me
 
 def pull_taxes(money_sheet, annual_base_pay, married):
