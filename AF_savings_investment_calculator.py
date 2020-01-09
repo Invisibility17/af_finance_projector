@@ -1,5 +1,3 @@
-#import xlrd
-#import csv
 import tabula
 import pandas
 from os.path import exists
@@ -23,8 +21,6 @@ def main():
     bas = calculate_bas(bas_sheet, me.rank)
     
     bah = pull_bah("BAH", me.zip_code, me.rank, me.dependents)
-    #print(me)
-    #fed_tax = pull_taxes("Air_Force_money.xlsx", base_pay*12+me.other_income, me.married)
     me.set_pay_allowances(base, bas, bah)
     
     # Stage 2: initialize assets for current year
@@ -36,7 +32,6 @@ def main():
 
     # Stage 4: create and output projections
     this_year = datetime.datetime.now().year
-    print(me)
     for proj in projections: # starts with this year
         saved = me.life_change(proj) # update member. Returns saved.
         print(proj.iloc[0,0].year)
@@ -56,7 +51,6 @@ def increment_accounts_partial_year(me, assets, start_month):
             break
 
     for i in range(len(monthly_saves)):
-        #account.contribute(monthly_saves)
         if assets[i].gets_match():
             govt_match = calculate_govt_match(me, monthly_saves[i])
         for month in range(start_month, 13, 1):
@@ -141,6 +135,8 @@ def pull_projection(raw, me, pay_chart, bas_chart):
                 events.append([row[1]["Other Date"], "Other Income", row[1]["Additional Income"]])
     if len(events) == 0:
         return pandas.DataFrame(events, columns=["Time", "Type", "Data"])
+
+    # Check senority every year
     for all_year in range(datetime.datetime.now().year, max_year+1, 1):
         events.append([me.EAD.replace(year=all_year, day=me.EAD.day+1), "Senority", ""])
     events = pandas.DataFrame(events, columns=["Time", "Type", "Data"])
@@ -154,8 +150,6 @@ def pull_projection(raw, me, pay_chart, bas_chart):
     last_row = 0
 
     events = create_update_frame(events, me, pay_chart, bas_chart)
-    #print(all_events)
-
     batched_events = []
     
     for row in events.iterrows():
@@ -171,7 +165,6 @@ def pull_projection(raw, me, pay_chart, bas_chart):
     return batched_events
 
 def create_update_frame(rows, me, pay_chart, bas_chart):
-    #  Month Rank Base BAH BAS Married Dependents
     easy_rows = []
     rank = me.rank
     zip_code = me.zip_code
@@ -242,39 +235,6 @@ def pull_member(member_sheet, taxes):
     me = Member(career_stats, taxes)
     return me
 
-def pull_taxes(money_sheet): #, annual_base_pay, married):
-    # Pull in rates, brackets, etc.
-    tax_sheet = read_sheet(money_sheet, "Tax Brackets")
-    return tax_sheet
-"""
-    rates = tax_sheet.loc[:,"Tax Rate"]
-    if married:
-        brackets = tax_sheet.loc[:,"Married"]
-        deduction = tax_sheet.loc[0,"Standard Married Deduction"]
-    else:
-        brackets = tax_sheet.loc[:,"Single"]
-        deduction = tax_sheet.loc[0,"Standard Single Deduction"]
-
-    # Calculate FICA taxes
-    fica_ceiling = tax_sheet.loc[0,"FICA Ceiling"]
-    fica_rate = tax_sheet.loc[0,"FICA Rate"]
-    if annual_base_pay > fica_ceiling:
-        total_tax = float((fica_ceiling * fica_rate)/100)
-    else:
-        total_tax = float((annual_base_pay * fica_rate)/100)
-
-    # Subtract standard deduction and calculate federal taxes
-    annual_base_pay -= deduction
-    total_tax += annual_base_pay * (rates[0] / 100)
-    for i in range(1, len(rates), 1):
-        if annual_base_pay > brackets[i-1]:
-            total_tax += (annual_base_pay - brackets[i-1])*(rates[i]-rates[i-1])/100
-        else:
-            break
-    
-    return total_tax"""
-
-    
 def calculate_bas(BAS_sheet, rank):
     if "O" in rank:
         return BAS_sheet.iloc[0, 1]

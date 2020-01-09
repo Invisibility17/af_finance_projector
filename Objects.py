@@ -99,14 +99,9 @@ class Member():
             senority = 22
         return senority
 
-    def life_change(self, change_matrix): #promotion_info=None, move_info=None, family_info=None):
+    def life_change(self, change_matrix):
         # Data Frame:
         #   Time Rank ZIP Base BAH BAS Married Dependents CoL State_Tax Other_Income
-        # 1.
-        # 2.
-        # 3.
-        # 4.
-        # reset incomes
         self.total_income = 0
         self.taxable_income = 0
         month_index = 0
@@ -136,7 +131,7 @@ class Member():
         self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
         return self.saved
     
-    def update_income(self, new_extra_income):
+    """def update_income(self, new_extra_income):
         self.other_income = new_extra_income
         self.total_income = (self.base + self.bah + self.bas)*12 + self.other_income
         self.taxable_income = self.base*12 + self.other_income
@@ -145,24 +140,7 @@ class Member():
 
     def update_COL(self, new_col):
         self.cost_of_living = new_col
-        self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
-
-    def move(self, time, new_zip, new_bah):
-        pass
-        
-        
-    
-    #def update_family(self, time, married=self.married, dependents=self.married,
-    #                  new_bah=self.bah, new_state=self.state_tax):
-    #    if new_bah != self.bah:
-    #        pass
-            
-        
-    
-    """def new_year(self, year):
-        self.compute_TIS(year)
-        self.total_income = (self.base + self.bas + self.bah)*12 + self.other_income
-        self.taxable_income = self.base * 12 + self.other_income"""
+        self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living"""
         
     def set_pay_allowances(self, base, bas, bah):
         self.base = base 
