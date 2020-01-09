@@ -5,38 +5,7 @@ import pandas
 from os.path import exists
 import datetime
 import numpy
-from Objects import Member
-
-class Account():
-    def __init__(self, vals):
-        self.name = vals["Type"]
-        self.balance = vals["Balance"]
-        self.proj_growth = vals["Growth Percent"]
-        self.hasLimit = False
-
-    def contribute(self, amount):
-        self.balance += amount
-
-    def monthly_grow(self):
-        self.balance *= (1 + (self.proj_growth/120))
-
-    def gets_match(self):
-        return self.name == "TSP"
-
-    def __str__(self):
-        return """{} account has a balance of ${:.2f} and a projected growth rate of {}%.""".format(
-            self.name, self.balance, self.proj_growth)
-
-class Retirement(Account):
-    def __init__(self, vals, limit):
-        super().__init__(vals)
-        self.hasLimit = True
-        self.limit = limit.iloc[0]
-
-    def __str__(self):
-        return super().__str__() + " Member's annual contribution limit is ${:.2f}.".format(self.limit)
-
-
+from Objects import Member, Account, Retirement
             
 def main():
     # Stage 1: initialize member for current / past year
@@ -54,22 +23,76 @@ def main():
     projection = pull_projection("Rachel_money.xlsx")
 
     # Stage 4: create and output projections
-    index_year = datetime.datetime.now().year
+    this_year = datetime.datetime.now().year
+    index_year = this_year
     for row in range(projection.shape[0]):
         this_proj = projection.iloc[row,:]
         for year in range(index_year, this_proj["Year"], 1):
-            print(index_year)
             # projection for gap rows / initial projection prior to further updates
-            if year == datetime.datetime.now().year: # initial projection; do after current month only
-                pass #update_assets(me, assets)
+            if year == this_year: # initial projection; do after current month only
+                print("Calculating for remainder of current year: {}".format(year))
+                increment_accounts_partial_year(me, assets, datetime.datetime.now().month+1)
             else: # gap rows; do entire year
+                print("Calculating for future year: {}".format(year))
                 increment_accounts_whole_year(me, assets)
-                    
-                
-
+            for a in assets:
+                print(a)
         index_year = this_proj["Year"]+1
+        
         # projection for current row
+        # update all the January changes
+        if not numpy.isnan(this_proj["Additional Income"]): 
+            me.additional_income = this_proj["Additional Income"]
+        if not numpy.isnan(this_proj["Zip Code"]): # all moves happen in January. Slightly inaccurate; account with CoL if necessary.
+            me.zip_code = this_proj["Zip Code"]
+        if not numpy.isnan(this_proj["Cost of Living"]):
+            me.cost_of_living = this_proj["Cost of Living"]
+        if not numpy.isnan(this_proj["State Taxes"]):
+            me.state_tax = this_proj["State Taxes"]
+        if not numpy.isnan(this_proj["Dependents"]):
+            me.dependents = this_proj["Dependents"].lower() == "yes"
+        if not numpy.isnan(this_proj["Married"]):
+            me.dependents = this_proj["Married"].lower() == "yes"
 
+        # Promote and calculate new seniority
+        #if (not numpy.isnan(this_proj["Rank"])) and (this_proj["Rank"] != me.rank):
+        #    pass
+            
+        if this_proj["Year"] == this_year:
+            if datetime.datetime.now().month > me.EAD.month:
+                pass
+            # in early months, wait for promotion
+
+            # update rank
+
+            # proceed accordingly
+
+        else:
+            pass
+            
+        
+
+def increment_accounts_partial_year(me, assets, start_month):
+    remain_to_save = (13 - start_month)*me.saved / 12
+    monthly_saves = [0]*len(assets)
+    for i, account in enumerate(assets):
+        if account.hasLimit and remain_to_save > (13 - start_month)*account.limit/12:
+            monthly_saves[i] = account.limit / (13-start_month)
+            remain_to_save -= account.limit
+        else:
+            monthly_saves[i] = remain_to_save/(13-start_month)
+            remain_to_save = 0
+            break
+
+    for i in range(len(monthly_saves)):
+        #account.contribute(monthly_saves)
+        if assets[i].gets_match():
+            govt_match = calculate_govt_match(me, monthly_saves[i])
+        for month in range(start_month, 13, 1):
+            assets[i].contribute(monthly_saves[i] + govt_match)
+            assets[i].monthly_grow()
+
+    
 def increment_accounts_whole_year(me, assets):
     # In order of priority, max out accounts (accounting for government match), add to accounts, and account for growth
     remain_to_save = me.saved
@@ -83,16 +106,13 @@ def increment_accounts_whole_year(me, assets):
             remain_to_save = 0
             break
 
-    for month in range(12):
-        for i in range(len(monthly_saves)):
-            #account.contribute(monthly_saves)
-            if assets[i].gets_match():
-                govt_match = calculate_govt_match(me, monthly_saves[i])
-            assets[i].contribute(monthly_saves[i] + govt_match)
-            assets[i].monthly_grow()
-
-    for account in assets:
-        print(account)
+    for i in range(len(monthly_saves)):
+        #account.contribute(monthly_saves)
+        if assets[i].gets_match():
+            govt_match = calculate_govt_match(me, monthly_saves[i])
+            for month in range(12):
+                assets[i].contribute(monthly_saves[i] + govt_match)
+                assets[i].monthly_grow()
     
 
 def calculate_govt_match(me, monthly_amount):
