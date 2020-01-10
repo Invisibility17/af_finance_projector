@@ -1,5 +1,5 @@
 Greetings earthlings!
-This projector is designed to take relatively simple user stats from the member (see Rachel_money.xlsx), combine it with publically-available data ("2020 Military Pay_Basic_DP.pdf", "pay_chart.csv", "Air_Force_Money.xlsx", "BAH") and create a picture over time of how accounts should grow given the member's spending and career milestones. Output is currently shown in the terminal from the run of AF_savings_investment_calculator.py but will eventually have its own spreadsheet.
+This projector is designed to take relatively simple user stats from the member (see member_profile.xlsx), combine it with publically-available data ("2020 Military Pay_Basic_DP.pdf", "pay_chart.csv", "Air_Force_Money.xlsx", "BAH") and create a picture over time of how accounts should grow given the member's spending and career milestones. Output is currently shown in the terminal from the run of AF_savings_investment_calculator.py but will eventually have its own spreadsheet.
 
 Files:
 AF_savings_investment_calculator.py: contains main function and support functions. Start here to view/edit functionality; run after editing Rachel_money.xlsx to get your own projections.
@@ -8,7 +8,8 @@ BAH: Housing allowance rates published by the DoD and available at https://www.d
 2020 Military Pay_Basic_DP.pdf: Base pay rates published by the DoD and available at https://www.dfas.mil/militarymembers/payentitlements/Pay-Tables.html
 Air_Force_money.xlsx: publically-available data compiled into my own format. BAS, Tax Rates, and contribution limits.
 pay_chart.csv: auto-generated from 2020 Military Pay_Basic_DP.pdf. Delete if wanting to reload from original.
-Rachel_money.xlsx: member profile (edit this to run your own projections). Note that this is sample data, not my own career/money info, since I am not about to put that on the Internet!
+member_profile.xlsx: member profile (edit this to run your own projections). Note that this is sample data, not my own career/money info, since I am not about to put that on the Internet!
+member_summary.xlsx: this file will be auto-generated and show the progression of the member's financial picture over time.
 
 
 Projector does not account for:
