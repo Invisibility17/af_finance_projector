@@ -44,6 +44,7 @@ def main():
         for account in assets:
             print(account)
             account.reset_year()
+    
         
 
 def increment_accounts_partial_year(me, assets, start_month):
