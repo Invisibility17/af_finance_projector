@@ -1,0 +1,34 @@
+Greetings earthlings!
+This projector is designed to take relatively simple user stats from the member (see Rachel_money.xlsx), combine it with publically-available data ("2020 Military Pay_Basic_DP.pdf", "pay_chart.csv", "Air_Force_Money.xlsx", "BAH") and create a picture over time of how accounts should grow given the member's spending and career milestones. Output is currently shown in the terminal from the run of AF_savings_investment_calculator.py but will eventually have its own spreadsheet.
+
+Files:
+AF_savings_investment_calculator.py: contains main function and support functions. Start here to view/edit functionality; run after editing Rachel_money.xlsx to get your own projections.
+Objects.py: contains Member, Account, and Retirement objects. 
+BAH: Housing allowance rates published by the DoD and available at https://www.defensetravel.dod.mil/site/pdcFiles.cfm?dir=/Allowances/BAH/PDF/
+2020 Military Pay_Basic_DP.pdf: Base pay rates published by the DoD and available at https://www.dfas.mil/militarymembers/payentitlements/Pay-Tables.html
+Air_Force_money.xlsx: publically-available data compiled into my own format. BAS, Tax Rates, and contribution limits.
+pay_chart.csv: auto-generated from 2020 Military Pay_Basic_DP.pdf. Delete if wanting to reload from original.
+Rachel_money.xlsx: member profile (edit this to run your own projections). Note that this is sample data, not my own career/money info, since I am not about to put that on the Internet!
+
+
+Projector does not account for:
+- Debt of any kind (will implement at some point, but thinking about how best to handle mortgages.)
+- Wanting to contribute a $ amount to a retirement account rather than max it
+- Anyone not receiving BAH (can correct for this by increasing COL by annual BAH amount manually)
+- Any dual mil
+- Head of household tax filers (ie single parents)
+- Anything except standard deduction
+- Deployments
+- Allowances outside BAH, BAS (such as DLA)
+- Growth/etc after last event in career projection (can artificially get years by introducing an 'event' with data that has already been inputted)
+- retirement / pensions
+- I'm sure lots of other stuff.
+
+
+Projector makes simplifying assumptions about:
+- Savings. All savings are allocated to accounts, so any spending (or future withdrawals from accounts) need to be handled via cost of living.
+- Leap years (I think any error is bounded and senority calculations have been correct for the scenarios I've run, which are few.)
+- Gov't match. Does not require full percentage allocations to TSP; does not match in only full percents; puts in even government contributions on a monthly basis for whole year's salary even if promotion/seniority bump would mean it should be less in early months and more in later months
+- Market returns. Market returns are deterministic and the same every year.
+- Inflation. The assumption is that the annual COLA will go 100% to COL increases, so savings does not change. Also, no attempt is made to correct returns for inflation. Using inflation-adjusted growth rates should result in a balance in current dollars.
+- Probably other things.
