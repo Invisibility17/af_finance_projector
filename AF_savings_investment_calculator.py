@@ -12,7 +12,7 @@ def main():
     
     # Stage 1: initialize member for current / past year
     taxes = read_sheet(misc_xls, "Tax Brackets")
-    me = pull_member(me_xls, taxes)
+    me, final_year = pull_member(me_xls, taxes)
     
     base_sheet = pull_base("2020 Military Pay_Basic_DP.pdf", pay_csv)
     base = calculate_base(base_sheet, me.senority, me.rank)
@@ -28,22 +28,54 @@ def main():
 
     # Stage 3: see if projections exist for years ahead.
     raw_projections = read_sheet(me_xls, "Career Projection")
-    projections = pull_projection(raw_projections, me, base_sheet, bas_sheet)
+    projections = pull_projection(raw_projections, me, final_year, base_sheet, bas_sheet)
 
     # Stage 4: create and output projections
     this_year = datetime.datetime.now().year
     start_month = datetime.datetime.now().month + 1
+    writer = pandas.ExcelWriter('member_summary.xlsx', engine='xlsxwriter')
     for proj in projections: # starts with this year
         saved = me.life_change(proj) # update member. Returns saved.
-        if proj.iloc[0,0].year == this_year:
+        year = proj.iloc[0,0].year
+        if year == this_year:
             increment_accounts_partial_year(me, assets, start_month)
         else:
             increment_accounts_whole_year(me, assets)
+        # Write results per year
         print(proj.iloc[0,0].year)
         print(me)
+        total_assets = 0
+        total_debts = 0
+        account_summary = []
         for account in assets:
             print(account)
+            account_summary.append([account.name, account.balance,
+                                    account.this_year, account.contributions])
+            total_assets += account.balance
             account.reset_year()
+        account_summary = pandas.DataFrame(
+            account_summary, columns = ["Account", "Balance",
+                                        "Contributed This Year",
+                                        "Total Contributions"])
+        net_worth = total_assets - total_debts
+        summary = [["Net Worth", net_worth], ["Assets", total_assets], ["Debts", total_debts]]
+        summary = pandas.DataFrame(summary, columns=["Summary", "Dollars"])
+
+        profit_loss = [["Income", me.total_income, 100],
+                       ["Taxes", me.fed_tax + me.state_tax, (me.fed_tax + me.state_tax)*100/me.total_income],
+                       ["Spent", me.cost_of_living, me.cost_of_living*100/me.total_income],
+                       ["Saved", me.saved, me.saved*100/me.total_income]]
+        profit_loss = pandas.DataFrame(profit_loss,
+                                       columns = ["", "Absolute", "Percent"])
+        
+        summary.to_excel(writer, sheet_name = str(year), index=False)
+        account_summary.to_excel(writer, sheet_name = str(year), startrow = 6, index=False)
+        profit_loss.to_excel(writer, sheet_name = str(year), startcol=3, index=False)
+
+    writer.save()
+        
+        
+    
     
         
 
@@ -106,7 +138,7 @@ def calculate_govt_match(me, monthly_amount):
     else:
         return 0
     
-def pull_projection(raw, me, pay_chart, bas_chart):
+def pull_projection(raw, me, final_year, pay_chart, bas_chart):
     # get all the events
 
     promotions = raw.loc[:,["Promote Date", "New Rank"]]
@@ -151,7 +183,7 @@ def pull_projection(raw, me, pay_chart, bas_chart):
         return pandas.DataFrame(events, columns=["Time", "Type", "Data"])
 
     # Check senority every year
-    for all_year in range(datetime.datetime.now().year, max_year+1, 1):
+    for all_year in range(datetime.datetime.now().year, max(final_year, max_year)+1, 1):
         events.append([me.EAD.replace(year=all_year, day=me.EAD.day+1), "Senority", ""])
     events = pandas.DataFrame(events, columns=["Time", "Type", "Data"])
     events.sort_values(by="Time", inplace=True)
@@ -247,7 +279,7 @@ def pull_member(member_sheet, taxes):
     career_stats = read_sheet(member_sheet, "Career Stats")
     career_stats = career_stats.set_index("Info")
     me = Member(career_stats, taxes)
-    return me
+    return me, career_stats.loc["Project Through", "Value"]
 
 def calculate_bas(BAS_sheet, rank):
     if "O" in rank:
@@ -267,10 +299,10 @@ def calculate_base(base_sheet, my_senority, my_rank):
     for i,rank in enumerate(ranks_col):
         if my_rank in str(rank):
             base_pay = base_sheet.iloc[i,my_senority]
-            if np.isnan(base_pay):
+            if np.isnan(float(base_pay)):
                 base_pay = base_sheet.iloc[i+1, my_senority]
             break
-    return base_pay
+    return float(base_pay)
 
 def read_sheet(file_name, sheet_name):
     if file_name.split(".")[1] == "xlsx":

@@ -108,6 +108,7 @@ class Member():
         this_year = 0
         self.matchable_income = 0
         for change in change_matrix.iterrows():
+            print(type(self.base), type(self.bah), type(self.bas))
             this_year = change[1]["Time"].year
             months = change[1]["Time"].month - month_index # start AFTER the month of the change
             self.total_income += (self.base + self.bah + self.bas)*months
@@ -124,6 +125,7 @@ class Member():
             self.cost_of_living = change[1]["Cost of Living"]
             self.state_tax = change[1]["State Tax"]
             self.other_income = change[1]["Other Income"]
+       
         self.total_income += (self.base + self.bah + self.bas)*(12 - month_index)
         self.taxable_income += (self.base)*(12 - month_index)
         self.matchable_income += (self.base)*(12-month_index)
