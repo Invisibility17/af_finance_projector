@@ -32,35 +32,46 @@ def main():
 
     # Stage 4: create and output projections
     this_year = datetime.datetime.now().year
+    start_month = datetime.datetime.now().month + 1
     for proj in projections: # starts with this year
         saved = me.life_change(proj) # update member. Returns saved.
+        if proj.iloc[0,0].year == this_year:
+            increment_accounts_partial_year(me, assets, start_month)
+        else:
+            increment_accounts_whole_year(me, assets)
         print(proj.iloc[0,0].year)
         print(me)
+        for account in assets:
+            print(account)
+            account.reset_year()
         
 
 def increment_accounts_partial_year(me, assets, start_month):
-    remain_to_save = (13 - start_month)*me.saved / 12
+    remain_to_save = me.saved 
     monthly_saves = [0]*len(assets)
     for i, account in enumerate(assets):
         if account.hasLimit and remain_to_save > (13 - start_month)*account.limit/12:
-            monthly_saves[i] = account.limit / (13-start_month)
-            remain_to_save -= account.limit
+            monthly_saves[i] = account.limit / 12
+            remain_to_save -= account.limit 
         else:
-            monthly_saves[i] = remain_to_save/(13-start_month)
+            monthly_saves[i] = remain_to_save/12
             remain_to_save = 0
             break
 
     for i in range(len(monthly_saves)):
         if assets[i].gets_match():
             govt_match = calculate_govt_match(me, monthly_saves[i])
+        else:
+            govt_match = 0
         for month in range(start_month, 13, 1):
             assets[i].contribute(monthly_saves[i] + govt_match)
             assets[i].monthly_grow()
+    
 
     
 def increment_accounts_whole_year(me, assets):
-    # In order of priority, max out accounts (accounting for government match), add to accounts, and account for growth
     remain_to_save = me.saved
+    # In order of priority, max out accounts (accounting for government match), add to accounts, and account for growth
     monthly_saves = [0]*len(assets)
     for i, account in enumerate(assets):
         if account.hasLimit and remain_to_save > account.limit:
@@ -71,24 +82,26 @@ def increment_accounts_whole_year(me, assets):
             remain_to_save = 0
             break
 
-    for i in range(len(monthly_saves)):
+    for i, asset in enumerate(assets):
         #account.contribute(monthly_saves)
-        if assets[i].gets_match():
+        if asset.gets_match():
             govt_match = calculate_govt_match(me, monthly_saves[i])
-            for month in range(12):
-                assets[i].contribute(monthly_saves[i] + govt_match)
-                assets[i].monthly_grow()
+        else:
+            govt_match = 0
+        for month in range(12):
+            asset.contribute(monthly_saves[i] + govt_match)
+            asset.monthly_grow()
     
 
 def calculate_govt_match(me, monthly_amount):
-    percent = monthly_amount / me.base
+    percent = monthly_amount / (me.matchable_income / 12) # this is a simplifying assumption
     if me.BRS:
         if percent >= 0.05:
-            return me.base * .05
+            return (me.matchable_income/12) * .05
         elif percent >= 0.03:
-            return me.base * .03 + ((percent - .03 ) * .5 * me.base_pay)
+            return (me.matchable_income/12) * .03 + ((percent - .03 ) * .5 * me.base_pay)
         else:
-            return max(me.base * percent, me.base * .01)
+            return max(me.matchable_income * percent, me.matchable_income * .01)
     else:
         return 0
     

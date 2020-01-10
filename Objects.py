@@ -106,11 +106,13 @@ class Member():
         self.taxable_income = 0
         month_index = 0
         this_year = 0
+        self.matchable_income = 0
         for change in change_matrix.iterrows():
             this_year = change[1]["Time"].year
             months = change[1]["Time"].month - month_index # start AFTER the month of the change
             self.total_income += (self.base + self.bah + self.bas)*months
             self.taxable_income += self.base*months
+            self.matchable_income += self.base*months
             month_index = change[1]["Time"].month
             self.rank = change[1]["Rank"]
             self.zip_code = change[1]["ZIP"]
@@ -124,6 +126,7 @@ class Member():
             self.other_income = change[1]["Other Income"]
         self.total_income += (self.base + self.bah + self.bas)*(12 - month_index)
         self.taxable_income += (self.base)*(12 - month_index)
+        self.matchable_income += (self.base)*(12-month_index)
         self.total_income += self.other_income
         self.taxable_income += self.other_income
         self.compute_taxes()
@@ -160,7 +163,7 @@ taxable income:\t${:.2f}
 fed tax:\t${:.2f}
 state tax:\t${:.2f}
 cost of living:\t${:.2f}
-saved:\t{}""".format(self.rank, self.zip_code, self.base, self.bah, self.bas, self.other_income,
+saved:\t${:.2f}""".format(self.rank, self.zip_code, self.base, self.bah, self.bas, self.other_income,
                      self.total_income,self.taxable_income, self.fed_tax, self.state_tax,
                      self.cost_of_living,self.saved)
 
@@ -177,10 +180,12 @@ class Account():
         self.proj_growth = vals["Growth Percent"]
         self.hasLimit = False
         self.this_year = 0
-
+        self.contributions = 0
+        
     def contribute(self, amount):
         self.balance += amount
         self.this_year += amount
+        self.contributions += amount
 
     def reset_year(self):
         self.this_year = 0
@@ -192,8 +197,13 @@ class Account():
         return self.name == "TSP"
 
     def __str__(self):
-        return """{} account has a balance of ${:.2f} and a projected growth rate of {}%. ${:.2f} of contributions have been made this year.""".format(
-            self.name, self.balance, self.proj_growth, self.this_year)
+        return """{}
+Balance:\t${:.2f}
+Matched:\t{}
+Projected growth rate:\t{}%.
+Annual contributions:\t${:.2f}
+Total contributions:\t${:.2f}""".format(
+            self.name, self.balance,  self.gets_match(), self.proj_growth, self.this_year, self.contributions)
 
 class Retirement(Account):
     def __init__(self, vals, limit):
@@ -202,4 +212,4 @@ class Retirement(Account):
         self.limit = limit.iloc[0]
 
     def __str__(self):
-        return super().__str__() + " Member's annual contribution limit is ${:.2f}.".format(self.limit)
+        return super().__str__() + "\nMember annual contribution limit: ${:.2f}.".format(self.limit)
