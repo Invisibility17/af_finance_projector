@@ -7,7 +7,7 @@ from Objects import Member, Account, Retirement
             
 def main():
     misc_xls = "Air_Force_money.xlsx"
-    me_xls = "Rachel_money.xlsx"
+    me_xls = "member_profile.xlsx"
     pay_csv = "pay_chart.csv"
     
     # Stage 1: initialize member for current / past year
