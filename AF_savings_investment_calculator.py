@@ -3,7 +3,9 @@ import pandas
 from os.path import exists
 import datetime
 import numpy as np
+import hashlib
 from Objects import Member, Account, Retirement
+
             
 def main():
     misc_xls = "Air_Force_money.xlsx"
@@ -27,13 +29,18 @@ def main():
     assets = pull_assets(me_xls, misc_xls)
 
     # Stage 3: see if projections exist for years ahead.
+    career_stats = read_sheet(me_xls, "Career Stats")
     raw_projections = read_sheet(me_xls, "Career Projection")
     projections = pull_projection(raw_projections, me, final_year, base_sheet, bas_sheet)
+    
 
     # Stage 4: create and output projections
     this_year = datetime.datetime.now().year
     start_month = datetime.datetime.now().month + 1
-    writer = pandas.ExcelWriter('member_summary.xlsx', engine='xlsxwriter')
+    identifier = hashlib.md5((me.hashme() + str(raw_projections)).encode()).hexdigest()[:6]
+    writer = pandas.ExcelWriter('member_summary_{}.xlsx'.format(identifier), engine='xlsxwriter', datetime_format='mm/dd/yyyy hh:mm:ss')
+    career_stats.to_excel(writer, sheet_name = "Career Stats", index=False)
+    raw_projections.to_excel(writer, sheet_name = "Career Projection", index=False)
     for proj in projections: # starts with this year
         saved = me.life_change(proj) # update member. Returns saved.
         year = proj.iloc[0,0].year
@@ -42,13 +49,13 @@ def main():
         else:
             increment_accounts_whole_year(me, assets)
         # Write results per year
-        print(proj.iloc[0,0].year)
-        print(me)
+        #print(proj.iloc[0,0].year)
+        #print(me)
         total_assets = 0
         total_debts = 0
         account_summary = []
         for account in assets:
-            print(account)
+            #print(account)
             account_summary.append([account.name, account.balance,
                                     account.this_year, account.contributions])
             total_assets += account.balance
