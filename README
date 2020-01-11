@@ -1,5 +1,5 @@
 Greetings earthlings!
-This projector is designed to take relatively simple user stats from the member (see member_profile.xlsx), combine it with publically-available data ("2020 Military Pay_Basic_DP.pdf", "pay_chart.csv", "Air_Force_Money.xlsx", "BAH") and create a picture over time of how accounts should grow given the member's spending and career milestones. Output is currently shown in the terminal from the run of AF_savings_investment_calculator.py but will eventually have its own spreadsheet.
+This projector is designed to take relatively simple user stats from the member (see member_profile.xlsx), combine it with publically-available data ("2020 Military Pay_Basic_DP.pdf", "pay_chart.csv", "Air_Force_Money.xlsx", "BAH") and create a picture over time of how accounts should grow given the member's spending and career milestones. Output from the run of AF_savings_investment_calculator.py appears in member_summary.xlsx and in the terminal.
 
 Files:
 AF_savings_investment_calculator.py: contains main function and support functions. Start here to view/edit functionality; run after editing Rachel_money.xlsx to get your own projections.
