@@ -1,5 +1,7 @@
 import datetime
 import numpy as np
+import hashlib
+
 class Member():
     def __init__(self, personal, tax_sheet):
         self.rank           = personal.loc["Rank", "Value"]
@@ -108,7 +110,6 @@ class Member():
         this_year = 0
         self.matchable_income = 0
         for change in change_matrix.iterrows():
-            print(type(self.base), type(self.bah), type(self.bas))
             this_year = change[1]["Time"].year
             months = change[1]["Time"].month - month_index # start AFTER the month of the change
             self.total_income += (self.base + self.bah + self.bas)*months
@@ -135,17 +136,6 @@ class Member():
 
         self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
         return self.saved
-    
-    """def update_income(self, new_extra_income):
-        self.other_income = new_extra_income
-        self.total_income = (self.base + self.bah + self.bas)*12 + self.other_income
-        self.taxable_income = self.base*12 + self.other_income
-        self.compute_taxes()
-        self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living
-
-    def update_COL(self, new_col):
-        self.cost_of_living = new_col
-        self.saved = self.total_income - self.fed_tax - self.state_tax - self.cost_of_living"""
         
     def set_pay_allowances(self, base, bas, bah):
         self.base = base 
@@ -169,10 +159,8 @@ saved:\t${:.2f}""".format(self.rank, self.zip_code, self.base, self.bah, self.ba
                      self.total_income,self.taxable_income, self.fed_tax, self.state_tax,
                      self.cost_of_living,self.saved)
 
-        #return """You make a total of ${0:.2f} a year.
-#You pay ${1:.2f} in federal and ${2:.2f} in state taxes.
-#Your cost of living is ${3:.2f} so you save ${4:.2f} annually ({5:.2f}%)""".format(
-#    self.total_income, self.fed_tax, self.state_tax, self.cost_of_living, self.saved, self.saved*100/self.total_income)
+    def hashme(self):
+        return hashlib.md5((self.rank + " " + str(self.EAD) + " " + str(self.zip_code) +" "+ str(self.other_income) + " " + str(self.state_tax) + " "+ str(self.cost_of_living)).encode() ).hexdigest(
 
 
 class Account():
