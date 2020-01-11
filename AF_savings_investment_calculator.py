@@ -33,7 +33,6 @@ def main():
     raw_projections = read_sheet(me_xls, "Career Projection")
     projections = pull_projection(raw_projections, me, final_year, base_sheet, bas_sheet)
     
-
     # Stage 4: create and output projections
     this_year = datetime.datetime.now().year
     start_month = datetime.datetime.now().month + 1
@@ -49,13 +48,10 @@ def main():
         else:
             increment_accounts_whole_year(me, assets)
         # Write results per year
-        #print(proj.iloc[0,0].year)
-        #print(me)
         total_assets = 0
         total_debts = 0
         account_summary = []
         for account in assets:
-            #print(account)
             account_summary.append([account.name, account.balance,
                                     account.this_year, account.contributions])
             total_assets += account.balance

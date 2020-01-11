@@ -160,7 +160,9 @@ saved:\t${:.2f}""".format(self.rank, self.zip_code, self.base, self.bah, self.ba
                      self.cost_of_living,self.saved)
 
     def hashme(self):
-        return hashlib.md5((self.rank + " " + str(self.EAD) + " " + str(self.zip_code) +" "+ str(self.other_income) + " " + str(self.state_tax) + " "+ str(self.cost_of_living)).encode() ).hexdigest(
+        return hashlib.md5((self.rank + " " + str(self.EAD) + " " + str(self.zip_code) +" "+ str(self.other_income) + " " + str(self.state_tax) + " "+ str(self.cost_of_living)).encode() ).hexdigest()
+
+    
 
 
 class Account():
